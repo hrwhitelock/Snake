@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Snake Test 18</title>
+    <style>
+    body {background-color:#000; color:#333333;} 
+    *{margin: 0px; padding: 0px;}
+    body{text-align:center;}
+    canvas{display: inline;}
+    p {color:white; font-family:Cambria;}
+
+    </style>
+</head>
+<header> <p>Snake Test 18: use wasd to move</p>
+<p> Click to begin</p>
+<p>Hit space to pause</p>
+<p>Click for New Game</p>
+</header>
+<!--I declare this done, and absolutely nothing you can say can change my mind--> 
+
+<body>
+    <canvas WIDTH="800" HEIGHT="600" id="snake"></canvas>
+    <script type="text/javascript">
+    window.addEventListener('keydown', keyDown, true);
+    window.addEventListener('click', onMouseClick, true);
+
+    var width = 800;
+    var height = 600;
+    var canvas = document.getElementById("snake");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.setAttribute('tabindex', 1);
+    var ctx = canvas.getContext("2d");
+    var fps = 1000 / 7;
+    var cellWidth = 20;
+    var food = {x: 0, y: 0};
+    var snake = [];
+	var badSnake = [];
+    var length = 5;
+    var direction;
+	var badDirection;
+    var directionQueue;
+	var badDirectionQueue;
+    var badFood = {x:0,y:0};
+    var foodX;
+    var foodY;
+    var badFoodX;
+    var badFoodY;
+    var gamePaused = false;
+	var gameLost = false; 
+    var count =0;
+	var badScore = 0;
+
+    //paints the start screen
+    paintStart();
+
+    function onMouseClick(){
+            paintBackground();
+            newGame();
+            game(); 
+
+    }
+    function game(){
+	//draws the snake
+        ctx.beginPath();
+        paintBackground();
+		paintScore(count);
+		paintBadScore();
+        moveSnake();
+		searchForFood();
+		moveBadSnake(); 
+		paintSnake();
+		paintBadSnake();
+        createFood();
+        createBadFood();
+
+        ctx.closePath();
+
+	//makes the head into a variable because laziness
+        var head = snake[0];
+		var badHead = badSnake[0];
+		for(i = 1; i < snake.length; i++){
+	    //snake body
+            if(head.x == snake[i].x && head.y == snake[i].y){
+				console.log("body");
+                gameOver();
+                return;
+            }
+        }
+		if ( badSnake.length-snake.length>10){
+			gameOver();
+		}
+		for(i = 0; i< badSnake.length; i++){
+			if(head.x == badSnake[i].x && head.y == badSnake[i].y){
+				badScore += 1;
+				console.log("here");
+			}
+		}
+		for(i = 0; i< snake.length; i++){
+			if(badHead.x == snake[i].x && badHead.y == snake[i].y){
+				badScore -= 1;
+				console.log("red ran into grey");
+			}
+		}
+        if(checkCollision(head.x, head.y, food.x, food.y)){
+	    //checks food collision
+            snake[snake.length] = {x: head.x, y: head.y};
+            foodX = Math.floor(Math.random() * ((width / cellWidth) -1));
+            foodY = Math.floor(Math.random() * ((height / cellWidth) -1));
+            createFood();
+            count +=1;
+        }
+		if(checkCollision(badHead.x, badHead.y, badFood.x, badFood.y)){
+	    //checks food collision
+            badSnake[badSnake.length] = {x: badHead.x, y: badHead.y};
+            badFoodX = Math.floor(Math.random() * ((width / cellWidth) -1));
+            badFoodY = Math.floor(Math.random() * ((height / cellWidth) -1));
+            createBadFood();
+        }
+		if(checkCollision(badHead.x, badHead.y, food.x, food.y)){
+	    //checks food collision
+            badSnake[badSnake.length] = {x: badHead.x, y: badHead.y};
+            foodX = Math.floor(Math.random() * ((width / cellWidth) -1));
+            foodY = Math.floor(Math.random() * ((height / cellWidth) -1));
+            createFood();
+			count -=1;
+        }
+        if(checkCollision(head.x, head.y, badFood.x, badFood.y)){
+	    //checks bad food collision
+			console.log("bad food collision");
+            gameOver();
+            return;
+        }
+
+        if(head.x < 0 || head.x == width / cellWidth || head.y < 0 || head.y == height / cellWidth){
+	    //walls
+			console.log("walls");
+            gameOver();
+            return;
+
+        }
+}
+    function newGame(){
+	//sets direction blah blah blah
+        direction = "right";
+        directionQueue = "right";
+        badDirection = "right";
+        badDirectionQueue = "right";
+        paintBackground();
+        count = 0;
+		console.log("new game");
+
+	//creates the position of the food       
+        foodX = Math.floor(Math.random() * ((width / cellWidth) -1));
+        foodY = Math.floor(Math.random() * ((height / cellWidth) -1));
+        badFoodX = Math.floor(Math.random() * ((width / cellWidth) -1));
+        badFoodY = Math.floor(Math.random() * ((height / cellWidth) -1));
+        createFood();
+        createBadFood();
+
+        createSnake();
+		createBadSnake();
+        //this is not mine, I learned how to do it on the internet
+        if(typeof loop !== "undefined") 
+            clearInterval(loop);
+        loop = setInterval(game, fps);
+       
+    }
+    function paintBackground(){
+        ctx.fillStyle = "#333";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);		
+    }
+    function paintScore(_count){
+	//...
+        ctx.textAlign = "left";
+        ctx.fillStyle = "white";
+        ctx.font = "20px Cambria";
+        _count +='';
+        ctx.fillText("Score:"+_count, 10, 15);
+    }
+	function paintBadScore(){
+		badScore = badSnake.length-snake.length;
+		ctx.fillStyle = "red";
+		ctx.textAlign = "right";
+		ctx.font = "20px Cambria";
+		badScore += '';
+		ctx.fillText("Death Countdown:" +badScore, width-10, 15);
+	}
+    function paintCell(x, y, fill, stroke){
+	//paints cells
+        ctx.strokeStyle = stroke;
+        ctx.fillStyle = fill;
+        ctx.fillRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
+        ctx.strokeRect(x*cellWidth, y*cellWidth, cellWidth, cellWidth);
+    }
+    function createSnake(){
+	//snake is an array of corner coordinates
+        snake = [];
+        for(i = length - 1; i >= 0; i--){
+            snake.push({x: i, y:0});
+        }
+    }
+	function createBadSnake(){
+		badSnake = [];
+        for(i = length - 1; i >= 0; i--){
+            badSnake.push({x: i, y:10});
+        }
+    }
+	
+    function paintSnake(){
+	//paints the snake
+        for(i = 0; i < snake.length; i++){
+            paintCell(snake[i].x, snake[i].y, "#999", "#333");
+        }
+    }
+	function paintBadSnake(){
+	    for(i = 0; i < badSnake.length; i++){
+            paintCell(badSnake[i].x, badSnake[i].y, "#FF0000", "#333");
+        }
+    }
+    function moveSnake(){
+        //get the head position/calculate the new head position
+        var x = snake[0].x;
+        var y = snake[0].y;
+        direction = directionQueue;
+        if(direction == "right") x++;
+        else if(direction == "left") x--;
+        else if(direction == "top") y--;
+        else if(direction == "bottom") y++;
+
+        //pop off the tail and make it the new head
+        var tail = snake.pop();
+        tail.x = x;
+        tail.y = y;
+        snake.unshift(tail);
+    }
+	function moveBadSnake(){
+		//searchForFood();
+        var badx = badSnake[0].x;
+        var bady = badSnake[0].y;
+        badDirection = badDirectionQueue;
+        if(badDirection == "right") badx++;
+        else if(badDirection == "left") badx--;
+        else if(badDirection == "top") bady--;
+        else if(badDirection == "bottom") bady++;
+
+        var badTail = badSnake.pop();
+        badTail.x = badx;
+        badTail.y = bady;
+        badSnake.unshift(badTail);
+    }
+	function searchForFood(){
+		var badx = badSnake[0].x;
+        var bady = badSnake[0].y;
+		var x = badFood.x;
+		var y = badFood.y; 
+		
+		var distX = badx-x;
+		var distY = bady-y; 
+		if(Math.abs(distX)>Math.abs(distY)){
+			if(distX>0 && badDirection !="right"){
+				badDirectionQueue = "left";
+			}
+			else if (distX>0 && badDirection == "right"){
+				if (distY>0){
+					badDirectionQueue = "top";
+				}
+				else if (distY<0 || distY == 0){
+					badDirectionQueue = "bottom";
+				}
+			}
+			else if(distX<0 && badDirection != "left"){
+				badDirectionQueue = "right";
+			}
+			else if (distX<0 && badDirection == "left"){
+				if (distY>0){
+					badDirectionQueue = "top";
+				}
+				else if (distY<0 || distY ==0){
+					badDirectionQueue = "bottom";
+				}
+			}
+		}
+		else if (Math.abs(distY)>Math.abs(distX)){
+			if(distY>0 && badDirection != "bottom"){
+				badDirectionQueue = "top";
+			}
+			else if (distY>0 && badDirection =="bottom"){
+				if (distX>0){
+					badDirectionQueue = "left";
+				}
+				else if (distX<0 || distX ==0){
+					badDirectionQueue = "right";
+				}
+			}
+			else if(distY<0 && badDirection !="top"){
+				badDirectionQueue = "bottom";
+			}
+			else if (distY<0 && badDirection =="top"){
+				if (distX>0){
+					badDirectionQueue = "left";
+				}
+				else if (distX<0 || distX ==0){
+					badDirectionQueue = "right";
+				}
+			}
+		}
+
+	}
+    function keyDown(e){
+	//up
+        if (e.keyCode == 87 && direction != "bottom") {
+                directionQueue = "top"
+        }
+	//left
+        else if (e.keyCode == 65 && direction != "right") {
+            directionQueue = "left";
+        }
+	//right
+        else if (e.keyCode == 68 && direction != "left") {
+            directionQueue = "right";
+        }
+	//down
+        else if (e.keyCode == 83 && direction != "top") {
+            directionQueue = "bottom";
+        }
+	//space
+        else if (e.keyCode == 32){
+            pauseGame();
+        }
+    }
+
+    function checkCollision(x1, y1, x2, y2){
+	//checks if two cells are in the same place
+        if(x1 == x2 && y1 == y2)
+            return true;
+        else return false;
+    }
+    function createFood(){
+	//makes food
+        food.x = foodX;
+        food.y = foodY;
+        paintCell(food.x, food.y, "#999", "#333");
+    }
+    function createBadFood(){
+	//same as above
+        badFood.x = badFoodX;
+        badFood.y = badFoodY;
+        paintCell(badFood.x, badFood.y, "#FF0000", "#333");
+    }
+
+    function paintStart(){
+        ctx.fillStyle = "222";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.textAlign = "center";
+        ctx.fillStyle = "white";
+        ctx.font = "bold 100px Cambria";
+        ctx.fillText("Snake", canvas.width/2, canvas.height/2-100);
+        ctx.font = "16px Cambria";
+        ctx.fillText("Use wasd to move", canvas.width/2, canvas.height/2 -60);
+        ctx.fillText("Click to start", canvas.width/2, canvas.height/2 -40);
+
+
+    }
+    function pauseGame() {
+        if (!gamePaused) {
+            clearInterval(loop);
+            loop = null;
+            gamePaused = true;
+
+        } 
+        else if (gamePaused &&!gameLost) {
+            loop = setInterval(game, fps);
+            gamePaused = false;
+        }
+    }
+	function gameOver() {
+		gameLost = true; 
+		paintBackground();
+		ctx.textAlign = "center";
+        ctx.fillStyle = "white";
+        ctx.font = "bold 100px Cambria";
+        ctx.fillText("Game Over", canvas.width/2, canvas.height/2-100);
+		ctx.font = "16px Cambria";
+        ctx.fillText("Click to Restart", canvas.width/2, canvas.height/2 -60);
+		clearInterval(loop);
+        loop = null;
+		console.log("game lost");
+	}
+
+    </script>
+    </body>
+
+
+    </html>
